@@ -2772,6 +2772,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
         dfsClientConf.socketTimeout);
       peer = TcpPeerServer.peerFromSocketAndKey(sock, 
           getDataEncryptionKey());
+      // Patching in https://issues.apache.org/jira/browse/HDFS-7005
+      peer.setReadTimeout(dfsClientConf.socketTimeout);
       success = true;
       return peer;
     } finally {
