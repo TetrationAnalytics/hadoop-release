@@ -19,9 +19,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import java.io.File;
-import java.io.IOException;
-
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -34,7 +32,8 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.mockito.Mockito;
 
-import com.google.common.base.Preconditions;
+import java.io.File;
+import java.io.IOException;
 
 /**
  * Utility class for accessing package-private DataNode information during tests.
@@ -116,7 +115,8 @@ public class DataNodeTestUtils {
   
   public static void runBlockScannerForBlock(DataNode dn, ExtendedBlock b) {
     BlockPoolSliceScanner bpScanner = getBlockPoolScanner(dn, b);
-    bpScanner.verifyBlock(b);
+    bpScanner.verifyBlock(new ExtendedBlock(b.getBlockPoolId(),
+        new BlockPoolSliceScanner.BlockScanInfo(b.getLocalBlock())));
   }
 
   private static BlockPoolSliceScanner getBlockPoolScanner(DataNode dn,
