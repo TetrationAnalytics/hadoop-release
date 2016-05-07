@@ -18,24 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import java.io.DataOutputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -48,13 +31,22 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.RollingLogs;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.LightWeightGSet;
 import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Scans the block files under a block pool and verifies that the
@@ -310,18 +302,11 @@ class BlockPoolSliceScanner {
     }
   }
   
-  private synchronized void updateScanStatus(Block block, 
+  private synchronized void updateScanStatus(BlockScanInfo info,
                                              ScanType type,
                                              boolean scanOk) {
-    BlockScanInfo info = blockMap.get(block);
-    
-    if ( info != null ) {
-      delBlockInfo(info);
-    } else {
-      // It might already be removed. Thats ok, it will be caught next time.
-      info = new BlockScanInfo(block);
-    }
-    
+    delBlockInfo(info);
+
     long now = Time.now();
     info.lastScanType = type;
     info.lastScanTime = now;
@@ -334,8 +319,9 @@ class BlockPoolSliceScanner {
     }
     
     if (verificationLog != null) {
-      verificationLog.append(now, block.getGenerationStamp(),
-          block.getBlockId());
+      // Disable
+      verificationLog.append(now, info.getGenerationStamp(),
+          info.getBlockId());
     }
   }
   
@@ -433,11 +419,11 @@ class BlockPoolSliceScanner {
           totalTransientErrors++;
         }
         
-        updateScanStatus(block.getLocalBlock(), ScanType.VERIFICATION_SCAN, true);
+        updateScanStatus((BlockScanInfo)block.getLocalBlock(), ScanType.VERIFICATION_SCAN, true);
 
         return;
       } catch (IOException e) {
-        updateScanStatus(block.getLocalBlock(), ScanType.VERIFICATION_SCAN, false);
+        updateScanStatus((BlockScanInfo)block.getLocalBlock(), ScanType.VERIFICATION_SCAN, false);
 
         // If the block does not exists anymore, then its not an error
         if (!dataset.contains(block)) {
@@ -496,7 +482,7 @@ class BlockPoolSliceScanner {
   
   // Picks one block and verifies it
   private void verifyFirstBlock() {
-    Block block = null;
+    BlockScanInfo block = null;
     synchronized (this) {
       if (!blockInfoSet.isEmpty()) {
         block = blockInfoSet.first();
