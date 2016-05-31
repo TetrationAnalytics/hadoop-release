@@ -507,8 +507,8 @@ public final class DomainSocketWatcher implements Closeable {
         }
       } catch (InterruptedException e) {
         LOG.info(toString() + " terminating on InterruptedException");
-      } catch (IOException e) {
-        LOG.error(toString() + " terminating on IOException", e);
+      } catch (Throwable e) {
+        LOG.error(toString() + " terminating on exception", e);
       } finally {
         kick(); // allow the handler for notificationSockets[0] to read a byte
         for (Entry entry : entries.values()) {
