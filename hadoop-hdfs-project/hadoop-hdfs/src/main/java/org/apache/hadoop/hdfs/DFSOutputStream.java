@@ -529,6 +529,9 @@ public class DFSOutputStream extends FSOutputSummer
               DFSClient.LOG.debug("Append to block " + block);
             }
             setupPipelineForAppendOrRecovery();
+            if (streamerClosed) {
+              continue;
+            }
             initDataStreaming();
           }
 
