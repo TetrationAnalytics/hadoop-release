@@ -410,8 +410,12 @@ public class LeaseManager {
       // verify that path exists in namespace
       try {
         INodeFile node = INodeFile.valueOf(fsnamesystem.dir.getINode(p), p);
-        Preconditions.checkState(node.isUnderConstruction());
-        inodes.put(p, node);
+        if (node.isUnderConstruction()) {
+          inodes.put(p, node);
+        } else {
+          LOG.warn("Ignore the lease of file " + p
+              + " for checkpoint since the file is not under construction");
+        }
       } catch (IOException ioe) {
         LOG.error(ioe);
       }

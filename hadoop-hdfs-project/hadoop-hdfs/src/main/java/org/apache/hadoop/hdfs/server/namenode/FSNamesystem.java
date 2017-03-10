@@ -3895,7 +3895,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       UnresolvedLinkException {
     assert hasWriteLock();
     FileUnderConstructionFeature uc = pendingFile.getFileUnderConstructionFeature();
-    Preconditions.checkArgument(uc != null);
+    if (uc == null) {
+      throw new IOException("Cannot finalize file " + src
+          + " because it is not under construction");
+    }
     leaseManager.removeLease(uc.getClientName(), src);
     
     pendingFile = pendingFile.recordModification(latestSnapshot);
@@ -5277,7 +5280,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           final INodeFile cons;
           try {
             cons = dir.getINode(path).asFile();
-            Preconditions.checkState(cons.isUnderConstruction());
+            if (!cons.isUnderConstruction()) {
+              LOG.warn("The file " + cons.getFullPathName()
+                 + " is not under construction but has lease.");
+              continue;
+            }
           } catch (UnresolvedLinkException e) {
             throw new AssertionError("Lease files should reside on this FS");
           }
